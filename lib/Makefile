@@ -38,12 +38,17 @@ PA_JS_NDL= syntax/pa_js.cmx syntax/pa_js.cmxs
 endif
 endif
 
+ifeq "${WITH_PPX}" "YES"
+PPX_EX= ppx/ppx_js.${BEST}
+endif
+
 all: $(LIBNAME).cma log/logger.cma \
 	${PA_JS} ${PA_JS_NDL} \
 	${PA_DERIVING} 	${PA_DERIVING_NDL} \
 	${DERIVING_JSON} \
 	${GRAPHICS_CMA} \
 	${TYXML_CMA} \
+	$(PPX_EX) \
 	META
 
 $(LIBNAME).cma: $(OBJS)
@@ -121,6 +126,28 @@ toplevel/jsooTop.cmo: toplevel/jsooTop.ml toplevel/jsooTop.cmi syntax/pa_js.cmo 
 toplevel/jsooTop.cmi: toplevel/jsooTop.mli
 	ocamlfind ocamlc $(SAFESTRING) -package lwt -I . -I log $< -o $@
 
+
+
+ppx/ppx_js.byte: ppx/ppx_js.cmo
+	ocamlfind ocamlc $(SAFESTRING) \
+		-linkpkg -package ppx_tools.metaquot ppx/ppx_js.cmo -o ppx/ppx_js.byte
+
+ppx/ppx_js.opt: ppx/ppx_js.cmx
+	ocamlfind ocamlopt $(SAFESTRING) \
+		-linkpkg -package ppx_tools.metaquot ppx/ppx_js.cmx -o ppx/ppx_js.native
+
+ppx/ppx_js.cmx: ppx/ppx_js.ml
+	ocamlfind ocamlopt $(SAFESTRING) -package ppx_tools.metaquot -g -c $<
+
+ppx/ppx_js.cmo: ppx/ppx_js.ml
+	ocamlfind ocamlc $(SAFESTRING) -package ppx_tools.metaquot -c $<
+
+ppx/ppx_js.cmi: ppx/ppx_js.mli
+	ocamlfind ocamlc $(SAFESTRING) -package ppx_tools.metaquot -c $<
+
+
+
+
 %.cmo: %.ml syntax/pa_js.cmo
 	ocamlfind ocamlc -pp "camlp4o syntax/pa_js.cmo" $(SAFESTRING) -package lwt -c -g $<
 
@@ -150,6 +177,7 @@ stubs.c: $(MLOBJS:cmo=ml)
 clean:
 	rm -f *.cm[xioa] *.[ao] *.so *.cmx[sa]
 	rm -f syntax/*.cm[xioa] syntax/*.[ao] syntax/*.so syntax/*.cmx[sa]
+	rm -f ppx/*.cm[xioa] ppx/*.[ao] ppx/*.so ppx/*.cmx[sa]
 	rm -f log/*.cm[xioa] log/*.[ao] log/*.so log/*.cmx[sa]
 	rm -f tyxml/*.cm[xioa] tyxml/*.[ao] tyxml/*.so tyxml/*.cmx[sa]
 	rm -f graphics/*.cm[xioa] graphics/*.[ao] graphics/*.so graphics/*.cmx[sa]
@@ -170,6 +198,9 @@ ifeq "${WITH_GRAPHICS}" "YES"
 endif
 ifeq "${WITH_TYXML}${WITH_REACT}" "YESYES"
 	ocamldep -pp "camlp4o syntax/pa_js.cmo" tyxml/*.ml tyxml/*.mli >> .depend
+endif
+ifeq "${WITH_PPX}" "YES"
+	ocamldep ppx/*.ml >> .depend
 endif
 ifeq "${WITH_DERIVING}" "YES"
 	${MAKE} --no-print-directory deriving_json/deriving_Json_lexer.ml
