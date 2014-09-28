@@ -39,7 +39,7 @@ endif
 endif
 
 ifeq "${WITH_PPX}" "YES"
-PPX_EX= ppx/ppx_js.${BEST}
+PPX_EX= ppx/$(PPX)
 endif
 
 all: $(LIBNAME).cma log/logger.cma \
@@ -134,7 +134,7 @@ ppx/ppx_js.byte: ppx/ppx_js.cmo
 
 ppx/ppx_js.opt: ppx/ppx_js.cmx
 	ocamlfind ocamlopt $(SAFESTRING) \
-		-linkpkg -package ppx_tools.metaquot ppx/ppx_js.cmx -o ppx/ppx_js.native
+		-linkpkg -package ppx_tools.metaquot ppx/ppx_js.cmx -o ppx/ppx_js.opt
 
 ppx/ppx_js.cmx: ppx/ppx_js.ml
 	ocamlfind ocamlopt $(SAFESTRING) -package ppx_tools.metaquot -g -c $<
@@ -145,6 +145,8 @@ ppx/ppx_js.cmo: ppx/ppx_js.ml
 ppx/ppx_js.cmi: ppx/ppx_js.mli
 	ocamlfind ocamlc $(SAFESTRING) -package ppx_tools.metaquot -c $<
 
+$(PPX_EX): ppx/ppx_js.$(BEST)
+	mv -f $< $@
 
 
 
