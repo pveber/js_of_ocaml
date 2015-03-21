@@ -72,10 +72,12 @@ class type xmlHttpRequest_binary = object
 end
 
 let create () : xmlHttpRequest Js.t =
-  try jsnew (Js.Unsafe.global##_XMLHttpRequest)() with _ ->
-  try jsnew (Js.Unsafe.global##activeXObject)(Js.string "Msxml2.XMLHTTP") with _ ->
-  try jsnew (Js.Unsafe.global##activeXObject)(Js.string "Msxml3.XMLHTTP") with _ ->
-  try jsnew (Js.Unsafe.global##activeXObject)(Js.string "Microsoft.XMLHTTP") with _ ->
+  let xmlHttpRequest = Js.Unsafe.global##.XMLHttpRequest in 
+  let activeXObject = Js.Unsafe.global##.activeXObject in
+  try new%js xmlHttpRequest with _ ->
+  try new%js activeXObject (Js.string "Msxml2.XMLHTTP") with _ ->
+  try new%js activeXObject (Js.string "Msxml3.XMLHTTP") with _ ->
+  try new%js activeXObject (Js.string "Microsoft.XMLHTTP") with _ ->
   assert false
 
 let encode = Url.encode_arguments
@@ -85,32 +87,34 @@ let encode_url args =
 
 let generateBoundary () =
   let nine_digits () =
-    string_of_int (truncate (Js.math##random() *. 1000000000.))
+    string_of_int (truncate (Js.math##random *. 1000000000.))
   in
   "js_of_ocaml-------------------" ^ nine_digits () ^ nine_digits ()
 
 (* TODO: test with elements = [] *)
 let encode_multipart boundary elements =
-  let b = jsnew array_empty () in
+  let b = new%js array_empty in
   (Lwt_list.iter_s
      (fun v ->
        ignore(b##push(Js.string ("--"^boundary^"\r\n")));
        match v with
 	 | name, `String value ->
-	   ignore(b##push_3(Js.string ("Content-Disposition: form-data; name=\"" ^ name ^ "\"\r\n\r\n"),
-			    value,
-			    Js.string "\r\n"));
+	   ignore(b##push_3
+		   (Js.string ("Content-Disposition: form-data; name=\"" ^ name ^ "\"\r\n\r\n"))
+		   value
+		   (Js.string "\r\n"));
 	   return ()
 	 | name, `File value ->
 	   File.readAsBinaryString (value :> File.blob Js.t)
 	   >>= (fun file ->
-	     ignore(b##push_4(Js.string ("Content-Disposition: form-data; name=\"" ^ name ^ "\"; filename=\""),
-			      File.filename value,
-			      Js.string "\"\r\n",
-			      Js.string "Content-Type: application/octet-stream\r\n"));
-	     ignore(b##push_3(Js.string "\r\n",
-			      file,
-			      Js.string "\r\n"));
+	     ignore(b##push_4
+		     (Js.string ("Content-Disposition: form-data; name=\"" ^ name ^ "\"; filename=\""))
+		     (File.filename value)
+		     (Js.string "\"\r\n")
+		     (Js.string "Content-Type: application/octet-stream\r\n"));
+	     ignore(b##push_3(Js.string "\r\n")
+			      file
+			      (Js.string "\r\n"));
 	     return ())
      )
      elements)
@@ -121,7 +125,7 @@ let encode_url l =
     (List.map
        (function
 	 | name,`String s -> ((Url.urlencode name) ^ "=" ^ (Url.urlencode (to_string s)))
-	 | name,`File s -> ((Url.urlencode name) ^ "=" ^ (Url.urlencode (to_string (s##name))))
+	 | name,`File s -> ((Url.urlencode name) ^ "=" ^ (Url.urlencode (to_string (s##.name))))
 ) l)
 
 (* Higher level interface: *)
@@ -214,12 +218,12 @@ let perform_raw_url
   | Some mime_type -> req ## overrideMimeType (Js.string mime_type)
   end;
 
-  req##_open (Js.string method_, Js.string url, Js._true);
+  req##_open (Js.string method_)( Js.string url)(Js._true);
   (match content_type with
     | Some content_type ->
-      req##setRequestHeader (Js.string "Content-type", Js.string content_type)
+      req##setRequestHeader (Js.string "Content-type") (Js.string content_type)
     | _ -> ());
-  List.iter (fun (n, v) -> req##setRequestHeader (Js.string n, Js.string v))
+  List.iter (fun (n, v) -> req##setRequestHeader (Js.string n) (Js.string v))
     headers;
   let headers s =
     Opt.case
@@ -230,16 +234,16 @@ let perform_raw_url
   let do_check_headers =
     let checked = ref false in
     fun () ->
-      if not (!checked) && not (check_headers (req##status) headers)
+      if not (!checked) && not (check_headers (req##.status) headers)
       then begin
-        Lwt.wakeup_exn w (Wrong_headers ((req##status),headers));
-        req##abort ();
+        Lwt.wakeup_exn w (Wrong_headers ((req##.status),headers));
+        req##abort;
       end;
       checked := true
   in
-  req##onreadystatechange <- Js.wrap_callback
+  req##.onreadystatechange := Js.wrap_callback
     (fun _ ->
-       (match req##readyState with
+       (match req##.readyState with
           (* IE doesn't have the same semantics for HEADERS_RECEIVED.
              so we wait til LOADING to check headers. See:
              http://msdn.microsoft.com/en-us/library/ms534361(v=vs.85).aspx *)
@@ -250,14 +254,14 @@ let perform_raw_url
           do_check_headers ();
 	  Lwt.wakeup w
             {url = url;
-	     code = req##status;
-             content = Js.to_string req##responseText;
+	     code = req##.status;
+             content = Js.to_string req##.responseText;
 	     content_xml =
 		(fun () ->
-		  match Js.Opt.to_option (req##responseXML) with
+		  match Js.Opt.to_option (req##.responseXML) with
 		    | None -> None
 		    | Some doc ->
-		      if (Js.some doc##documentElement) == Js.null
+		      if (Js.some doc##.documentElement) == Js.null
 		      then None
 		      else Some doc);
              headers = headers
@@ -266,18 +270,18 @@ let perform_raw_url
 
   begin match progress with
   | Some progress ->
-    req##onprogress <- Dom.handler
+    req##.onprogress := Dom.handler
       (fun e ->
-        progress e##loaded e##total;
+        progress e##.loaded e##.total;
         Js._true)
   | None -> ()
   end;
-  Optdef.iter (req##upload) (fun upload ->
+  Optdef.iter (req##.upload) (fun upload ->
     match upload_progress with
     | Some upload_progress ->
-      upload##onprogress <- Dom.handler
+      upload##.onprogress := Dom.handler
         (fun e ->
-          upload_progress e##loaded e##total;
+          upload_progress e##.loaded e##.total;
           Js._true)
     | None -> ()
   );
@@ -288,7 +292,7 @@ let perform_raw_url
          ignore (req##send(Js.some (string (encode_url !l)));return ())
      | Some (`FormData f) -> req##send_formData(f));
 
-  Lwt.on_cancel res (fun () -> req##abort ()) ;
+  Lwt.on_cancel res (fun () -> req##abort) ;
   res
 
 let perform

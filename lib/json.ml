@@ -51,7 +51,7 @@ let input_reviver =
     else
       value in
   wrap_meth_callback reviver
-let unsafe_input s = json##parse_ (s, input_reviver)
+let unsafe_input s = json##parse_ s input_reviver
 
 let mlString_constr = Unsafe.variable "MlString"
 let output_reviver key value =
@@ -59,4 +59,4 @@ let output_reviver key value =
     to_byte_jsstring (Unsafe.coerce value)
   else
     value
-let output obj = json##stringify_ (obj, output_reviver)
+let output obj = json##stringify_ obj output_reviver

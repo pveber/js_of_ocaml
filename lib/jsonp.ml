@@ -33,17 +33,17 @@ let raw_call name uri error_cb user_cb =
   let script = Dom_html.(createScript document) in
   let finalize () =
     Js.Unsafe.delete (Dom_html.window) (Js.string name);
-    Dom.removeChild (Dom_html.document##body) script in
+    Dom.removeChild (Dom_html.document##.body) script in
   let executed = ref false in
   Js.Unsafe.set
     (Dom_html.window)
     (Js.string name)
     (fun x -> executed:=true; finalize (); user_cb x);
-  script##src <- Js.string uri;
-  script##_type <- Js.string ("text/javascript");
-  script##async <- Js._true;
-  (Js.Unsafe.coerce script)##onerror <- (fun x -> finalize (); error_cb x);
-  (Js.Unsafe.coerce script)##onload <- (fun x ->
+  script##.src   := Js.string uri;
+  script##._type := Js.string ("text/javascript");
+  script##.async := Js._true;
+  (Js.Unsafe.coerce script)##.onerror := (fun x -> finalize (); error_cb x);
+  (Js.Unsafe.coerce script)##.onload := (fun x ->
       Lwt.async (fun () ->
           Lwt.bind (Lwt_js.sleep 1.) (fun () ->
               if !executed
@@ -53,7 +53,7 @@ let raw_call name uri error_cb user_cb =
                 finalize (); error_cb x; Lwt.return_unit))
         )
     );
-  let init () = ignore (Dom.appendChild (Dom_html.document##body) script) in
+  let init () = ignore (Dom.appendChild (Dom_html.document##.body) script) in
   init, finalize
 
 let call_ make_uri error_cb user_cb =

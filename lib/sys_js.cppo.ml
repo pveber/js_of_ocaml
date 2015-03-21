@@ -27,8 +27,8 @@ let register_file ~name ~content = register_file' name content
 
 let register_autoload ~path f =
   let f' path pos =
-    let prefix = Js.to_string (path##slice(0,pos)##join(Js.string"/")) in
-    let suffix = Js.to_string (path##slice_end(pos)##join(Js.string"/")) in
+    let prefix = Js.to_string ((path##slice 0 pos)##join(Js.string"/")) in
+    let suffix = Js.to_string ((path##slice_end pos)##join(Js.string"/")) in
     match f (prefix, suffix)  with
     | None -> Js._false
     | Some c ->

@@ -51,6 +51,10 @@ all: $(LIBNAME).cma log/logger.cma \
 	$(PPX_EX) \
 	META
 
+ppx_syntax: $(LIBNAME).cma \
+	$(PPX_EX) \
+	META
+
 $(LIBNAME).cma: $(OBJS)
 	ocamlmklib -o $(LIBNAME) $(OBJS)
 
@@ -154,8 +158,8 @@ $(PPX_EX): ppx/ppx_js.$(BEST)
 
 
 
-%.cmo: %.ml syntax/pa_js.cmo
-	ocamlfind ocamlc -pp "camlp4o syntax/pa_js.cmo" $(SAFESTRING) -package lwt -c -g $<
+%.cmo: %.ml ppx/ppx_js.$(BEST)
+	ocamlfind ocamlc -ppx ppx/ppx_js.$(BEST) $(SAFESTRING) -package lwt -c -g $<
 
 %.cmi: %.mli
 	ocamlfind ocamlc -package lwt -I deriving_json $(SAFESTRING) -c $<

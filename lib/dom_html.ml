@@ -1224,7 +1224,7 @@ end
 
 let window : window t = Js.Unsafe.global (* The toplevel object *)
 
-let document = window##document
+let document = window##.document
 let getElementById id =
   Js.Opt.case (document##getElementById (Js.string id))
     (fun () -> raise Not_found)
@@ -1272,7 +1272,7 @@ end
 
 let opt_iter x f = match x with None -> () | Some v -> f v
 
-let createElement (doc : document t) name = doc##createElement(Js.string name)
+let createElement (doc : document t) name = doc##createElement (Js.string name)
 let unsafeCreateElement doc name = Js.Unsafe.coerce (createElement doc name)
 
 let createElementSyntax = ref `Unknown
@@ -1284,19 +1284,19 @@ let rec unsafeCreateElementEx ?_type ?name doc elt =
     match !createElementSyntax with
       `Standard ->
         let res = Js.Unsafe.coerce (createElement doc elt) in
-        opt_iter _type (fun t -> res##_type <- t);
-        opt_iter name (fun n -> res##name <- n);
+        opt_iter _type (fun t -> res##._type := t);
+        opt_iter name (fun n -> res##.name := n);
         res
     | `Extended ->
-        let a = jsnew Js.array_empty () in
-        ignore (a##push_2(Js.string "<", Js.string elt));
+        let a = new%js Js.array_empty in
+        ignore (a##push_2 (Js.string "<")(Js.string elt));
         opt_iter _type (fun t ->
           ignore
-            (a##push_3(Js.string " type=\"", html_escape t, Js.string "\"")));
+            (a##push_3(Js.string " type=\"")( html_escape t)( Js.string "\"")));
         opt_iter name (fun n ->
           ignore
-            (a##push_3(Js.string " name=\"", html_escape n, Js.string "\"")));
-        ignore (a##push(Js.string ">"));
+            (a##push_3(Js.string " name=\"")( html_escape n)( Js.string "\"")));
+        ignore (a##push (Js.string ">"));
         Js.Unsafe.coerce (doc##createElement (a##join (Js.string "")))
     | `Unknown ->
         createElementSyntax :=
@@ -1305,8 +1305,8 @@ let rec unsafeCreateElementEx ?_type ?name doc elt =
               let el : inputElement Js.t =
                 Js.Unsafe.coerce
                   (document##createElement(Js.string "<input name=\"x\">")) in
-              el##tagName##toLowerCase() == Js.string "input" &&
-              el##name == Js.string "x"
+              (el##.tagName)##toLowerCase == Js.string "input" &&
+              el##.name == Js.string "x"
             with _ ->
               false
           then
@@ -1407,10 +1407,10 @@ exception Canvas_not_available
 
 let createCanvas doc : canvasElement t =
   let c = unsafeCreateElement doc "canvas" in
-  if not (Opt.test c##getContext) then raise Canvas_not_available;
+  if not (Opt.test c##.getContext) then raise Canvas_not_available;
   c
 
-let html_element : htmlElement t constr = Js.Unsafe.global ## _HTMLElement
+let html_element : htmlElement t constr = Js.Unsafe.global ##. _HTMLElement
 
 module CoerceTo = struct
   let element : #Dom.node Js.t -> element Js.t Js.opt =
@@ -1418,7 +1418,7 @@ module CoerceTo = struct
       (* ie < 9 does not have HTMLElement: we have to cheat to check
 	 that something is an html element *)
       (fun e ->
-	if def ((Js.Unsafe.coerce e)##innerHTML) == undefined then
+	if def ((Js.Unsafe.coerce e)##.innerHTML) == undefined then
 	  Js.null
 	else Js.some (Js.Unsafe.coerce e))
     else
@@ -1428,7 +1428,7 @@ module CoerceTo = struct
 	else Js.null)
 
   let unsafeCoerce tag (e : #element t) =
-    if e##tagName##toLowerCase() == Js.string tag then
+    if (e##.tagName)##toLowerCase == Js.string tag then
       Js.some (Js.Unsafe.coerce e)
     else
       Js.null
@@ -1499,14 +1499,14 @@ module CoerceTo = struct
       Js.some (Js.Unsafe.coerce ev)
     else Js.null
 
-  let mouseEvent ev = unsafeCoerceEvent (Js.Unsafe.global##_MouseEvent) ev
+  let mouseEvent ev = unsafeCoerceEvent (Js.Unsafe.global##.MouseEvent) ev
   let keyboardEvent ev =
-    unsafeCoerceEvent (Js.Unsafe.global##_KeyboardEvent) ev
-  let wheelEvent ev = unsafeCoerceEvent (Js.Unsafe.global##_WheelEvent) ev
+    unsafeCoerceEvent (Js.Unsafe.global##.KeyboardEvent) ev
+  let wheelEvent ev = unsafeCoerceEvent (Js.Unsafe.global##.WheelEvent) ev
   let mouseScrollEvent ev =
-    unsafeCoerceEvent (Js.Unsafe.global##_MouseScrollEvent) ev
+    unsafeCoerceEvent (Js.Unsafe.global##.MouseScrollEvent) ev
   let popStateEvent ev =
-    unsafeCoerceEvent (Js.Unsafe.global##_PopStateEvent) ev
+    unsafeCoerceEvent (Js.Unsafe.global##.PopStateEvent) ev
 
 end
 
@@ -1515,39 +1515,39 @@ end
 let eventTarget = Dom.eventTarget
 
 let eventRelatedTarget (e : #mouseEvent t) =
-  Optdef.get (e##relatedTarget) (fun () ->
-  match Js.to_string (e##_type) with
-    "mouseover" -> Optdef.get (e##fromElement) (fun () -> assert false)
-  | "mouseout"  -> Optdef.get (e##toElement) (fun () -> assert false)
+  Optdef.get (e##.relatedTarget) (fun () ->
+  match Js.to_string (e##._type) with
+    "mouseover" -> Optdef.get (e##.fromElement) (fun () -> assert false)
+  | "mouseout"  -> Optdef.get (e##.toElement) (fun () -> assert false)
   | _           -> Js.null)
 
 let eventAbsolutePosition' (e : #mouseEvent t) =
-  let body = document##body in
-  let html = document##documentElement in
-  (e##clientX + body##scrollLeft + html##scrollLeft,
-   e##clientY + body##scrollTop + html##scrollTop)
+  let body = document##.body in
+  let html = document##.documentElement in
+  (e##.clientX + body##.scrollLeft + html##.scrollLeft,
+   e##.clientY + body##.scrollTop + html##.scrollTop)
 
 let eventAbsolutePosition (e : #mouseEvent t) =
-  Optdef.case (e##pageX) (fun () -> eventAbsolutePosition' e) (fun x ->
-  Optdef.case (e##pageY) (fun () -> eventAbsolutePosition' e) (fun y ->
+  Optdef.case (e##.pageX) (fun () -> eventAbsolutePosition' e) (fun x ->
+  Optdef.case (e##.pageY) (fun () -> eventAbsolutePosition' e) (fun y ->
   (x, y)))
 
 let elementClientPosition (e : #element t) =
-  let r = e##getBoundingClientRect () in
-  let body = document##body in
-  let html = document##documentElement in
-  (truncate r##left - body##clientLeft - html##clientLeft,
-   truncate r##top - body##clientTop - html##clientTop)
+  let r = e##getBoundingClientRect in
+  let body = document##.body in
+  let html = document##.documentElement in
+  (truncate r##.left - body##.clientLeft - html##.clientLeft,
+   truncate r##.top - body##.clientTop - html##.clientTop)
 
 let getDocumentScroll () =
-  let body = document##body in
-  let html = document##documentElement in
-  (body##scrollLeft + html##scrollLeft, body##scrollTop + html##scrollTop)
+  let body = document##.body in
+  let html = document##.documentElement in
+  (body##.scrollLeft + html##.scrollLeft, body##.scrollTop + html##.scrollTop)
 
 let buttonPressed (ev : #mouseEvent Js.t) =
-  Js.Optdef.case (ev##which)
+  Js.Optdef.case (ev##.which)
     (fun () ->
-      match ev##button with
+      match ev##.button with
 	| 1 -> Left_button
 	| 2 -> Right_button
 	| 4 -> Middle_button
@@ -1556,7 +1556,7 @@ let buttonPressed (ev : #mouseEvent Js.t) =
 
 let hasMousewheelEvents () =
   let d = createDiv document in
-  d##setAttribute(Js.string "onmousewheel", Js.string "return;");
+  d##setAttribute(Js.string "onmousewheel")( Js.string "return;");
   Js.typeof (Js.Unsafe.get d (Js.string "onmousewheel")) ==
   Js.string "function"
 
@@ -1565,17 +1565,17 @@ let addMousewheelEventListener e h capt =
     addEventListener e Event.mousewheel
       (handler
          (fun (e : mousewheelEvent t) ->
-            let dx = - Optdef.get (e##wheelDeltaX) (fun () -> 0) / 40 in
+            let dx = - Optdef.get (e##.wheelDeltaX) (fun () -> 0) / 40 in
             let dy =
-              - Optdef.get (e##wheelDeltaY) (fun () -> e##wheelDelta) / 40 in
+              - Optdef.get (e##.wheelDeltaY) (fun () -> e##.wheelDelta) / 40 in
             h (e :> mouseEvent t) ~dx ~dy))
       capt
   else
     addEventListener e Event._DOMMouseScroll
       (handler
          (fun (e : mouseScrollEvent t) ->
-            let d = e##detail in
-            if e##axis == e##_HORIZONTAL_AXIS then
+            let d = e##.detail in
+            if e##.axis == e##._HORIZONTAL_AXIS then
               h (e :> mouseEvent t) ~dx:d ~dy:0
             else
               h (e :> mouseEvent t) ~dx:0 ~dy:d))
@@ -1650,7 +1650,7 @@ type taggedElement =
 let other e = Other (e : #element t :> element t)
 
 let tagged (e : #element t) =
-  let tag = Js.to_bytestring (e##tagName##toLowerCase()) in
+  let tag = Js.to_bytestring ((e##.tagName)##toLowerCase) in
   if String.length tag = 0 then
     other e
   else
@@ -1815,46 +1815,46 @@ let opt_taggedEvent ev = Opt.case ev (fun () -> None) (fun ev -> Some (taggedEve
 let stopPropagation ev =
   let e = Js.Unsafe.coerce ev in
   Optdef.case
-    (e##stopPropagation)
-    (fun () -> e##cancelBubble <- Js._true)
-    (fun _ -> e##_stopPropagation())
+    (e##.stopPropagation)
+    (fun () -> e##.cancelBubble := Js._true)
+    (fun _ -> e##_stopPropagation)
 
 let _requestAnimationFrame : (unit -> unit) Js.callback -> unit =
   Js.Unsafe.pure_expr
     (fun _ ->
        let w = Js.Unsafe.coerce window in
        let l =
-         [w##requestAnimationFrame;
-          w##mozRequestAnimationFrame;
-          w##webkitRequestAnimationFrame;
-          w##oRequestAnimationFrame;
-          w##msRequestAnimationFrame]
+         [w##.requestAnimationFrame;
+          w##.mozRequestAnimationFrame;
+          w##.webkitRequestAnimationFrame;
+          w##.oRequestAnimationFrame;
+          w##.msRequestAnimationFrame]
        in
        try
          let req = List.find (fun c -> Js.Optdef.test c) l in
          fun callback -> Js.Unsafe.fun_call req [|Js.Unsafe.inject callback|]
        with Not_found ->
-         let now () = jsnew Js.date_now ()##getTime() in
+         let now () = new%js Js.date_now ##getTime in
          let last = ref (now ()) in
          fun callback ->
            let t = now () in
            let dt = !last +. 1000. /. 60. -. t in
            let dt = if dt < 0. then 0. else dt in
            last := t;
-           ignore (window##setTimeout (callback, dt)))
+           ignore (window##setTimeout callback dt))
 
 (****)
 
 let hasPushState () =
-  Js.Optdef.test ((Js.Unsafe.coerce (window##history))##pushState)
+  Js.Optdef.test ((Js.Unsafe.coerce (window##.history))##.pushState)
 
 let hasPlaceholder () =
  let i = createInput document in
-  Js.Optdef.test ((Js.Unsafe.coerce i)##placeholder)
+  Js.Optdef.test ((Js.Unsafe.coerce i)##.placeholder)
 
 let hasRequired () =
  let i = createInput document in
-  Js.Optdef.test ((Js.Unsafe.coerce i)##required)
+  Js.Optdef.test ((Js.Unsafe.coerce i)##.required)
 
 let overflow_limit = 2147483_000. (* ms *)
 
@@ -1870,7 +1870,7 @@ let setTimeout callback d : timeout_id_safe =
       if remain = 0.
       then callback
       else loop remain in
-    id := Some (window##setTimeout (Js.wrap_callback cb, step))
+    id := Some (window##setTimeout (Js.wrap_callback cb) step)
   in
   loop d ();
   id
@@ -1880,4 +1880,4 @@ let clearTimeout (id : timeout_id_safe) =
   | None -> ()
   | Some x ->
      id:=None;
-     window##clearTimeout(x)
+     window##clearTimeout x
