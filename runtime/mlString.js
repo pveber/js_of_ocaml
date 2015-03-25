@@ -401,3 +401,46 @@ function caml_blit_string(s1, i1, s2, i2, len) {
 
 //Provides: caml_ml_string_length const
 function caml_ml_string_length(s) { return s.l }
+
+
+//Provides: caml_uint8_get16
+function caml_uint8_get16(s,index) {
+    if(index < 0 || idx + 1 >= caml_string_length(s)) caml_string_bound_error();
+    var b1 = caml_string_unsafe_get (s, index);
+    var b2 = caml_string_unsafe_get (s, index + 1);
+    return (b2 << 8 | b1);
+}
+//Provides: caml_uint8_get32
+function caml_uint8_get32(s,index) {
+    if(index < 0 || idx + 3 >= caml_string_length(s)) caml_string_bound_error();
+    var b1 = caml_string_unsafe_get (s, index);
+    var b2 = caml_string_unsafe_get (s, index + 1);
+    var b3 = caml_string_unsafe_get (s, index + 2);
+    var b4 = caml_string_unsafe_get (s, index + 3);
+    return   (b4 << 24 | b3 << 16 | b2 << 8 | b1);
+}
+//not providing caml_uint8_get64
+//Provides: caml_uint8_set16
+function caml_uint8_set16(s,index,val){
+    if(index < 0 || idx + 1 >= caml_string_length(s)) caml_string_bound_error();
+    var b2 = 0xFF & (val >> 8);
+    var b1 = 0xFF & val;
+    caml_string_unsafe_set(s,index,b1);
+    caml_string_unsafe_set(s,index + 1, b2);
+    return 0;
+}
+
+//Provides: caml_uint8_set32
+function caml_uint8_set32(s,index,val){
+    if(index < 0 || idx + 3 >= caml_string_length(s)) caml_string_bound_error();
+    var b4 = 0xFF & val >> 24;
+    var b3 = 0xFF & val >> 16;
+    var b2 = 0xFF & val >> 8;
+    var b1 = 0xFF & val;
+    caml_string_unsafe_set(s,index,b1);
+    caml_string_unsafe_set(s,index + 1, b2);
+    caml_string_unsafe_set(s,index + 2, b3);
+    caml_string_unsafe_set(s,index + 3, b4);
+    return 0;
+}
+//not providing caml_uint8_set64

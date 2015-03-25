@@ -275,6 +275,30 @@ function caml_make_vect (len, init) {
   return b;
 }
 
+//Provides: caml_make_float_vect const
+function caml_make_float_vect (len, init) {
+  var len = len + 1 | 0;
+  var b = new Array(len);
+  b[0]=254;
+  for (var i = 1; i < len; i++) b[i] = init;
+  return b;
+}
+
+//Provides: caml_bswap16
+function caml_bswap16(x){
+  return ((val & 0xFF) << 8) | ((val >> 8) & 0xFF);
+}
+
+//Provides: caml_int32_bswap
+function caml_int32_bswap(x){
+  return ((x & 0x00FF) << 24)
+       | ((x & 0xFF00) << 8)
+       | ((x >> 8)  & 0xFF00)
+       | ((x >> 24) & 0x00FF);
+}
+
+//not providing caml_int64_bswap
+
 //Provides: caml_compare_val
 //Requires: MlString, caml_int64_compare, caml_int_compare, caml_string_compare
 //Requires: caml_invalid_argument
