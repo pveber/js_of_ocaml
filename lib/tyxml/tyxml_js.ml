@@ -251,6 +251,12 @@ module R = struct
   module Xml_wed_svg = struct
     include Xml_wed
 
+    let leaf ?(a=[]) name =
+      let e =
+        Dom_html.document##createElementNS(Dom_svg.xmlns, Js.string name) in
+      Xml.attach_attribs e a;
+      (e :> Dom.node Js.t)
+
     let node ?(a=[]) name l =
       let e =
         Dom_html.document##createElementNS(Dom_svg.xmlns,Js.string name) in
